@@ -66,10 +66,10 @@ var parser = parse({
                         longitude: o[23],
                         dist: o[o.length - 1]
                     }
-                }).value();
+                }).sortBy('dist').slice(0, 3).value();
 
             var a = _.map(filtered, function(o) {
-                return o['name'] + ", BC, Canada";
+                return o['name'] + o['dist'];
             });
 
             twiml.message(JSON.stringify(a));
