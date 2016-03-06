@@ -64,15 +64,20 @@ var parser = parse({
                         name: o[3],
                         latitude: o[22],
                         longitude: o[23],
+                        hours: o[14],
+                        stNum: o[15],
+                        stName: o[16],
                         dist: o[o.length - 1]
                     }
                 }).sortBy('dist').slice(0, 3).value();
 
             var a = _.map(filtered, function(o) {
-                return o['name'] + o['dist'];
+                return o['name'] + " is open from " + o['hours'] + ' located at ' + o['stName'] + ' and ' + o['stNum'] + ' which is ' + o['dist'] + 'm from you.';
             });
 
-            twiml.message(JSON.stringify(a));
+            _.each(a, function(r) {
+                twiml.message(r);
+            });
             res.send(twiml);
         });
     });
