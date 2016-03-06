@@ -25,7 +25,9 @@ validate: false
     request(uri, function(err, resp) {
         console.log(err, resp);
         var twiml = new twilio.TwimlResponse();
-        twiml.message('Something');
+        var json = JSON.parse(resp.body);
+        console.log(JSON.stringify(json.results[0].geometry.location));
+        twiml.message(JSON.stringify(json.results[0].geometry.location));
         res.send(twiml);
     });
 });
