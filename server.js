@@ -3,19 +3,30 @@ var app = express();
 var bodyParser = require('body-parser');
 var xmlParser = require('express-xml-bodyparser');
 var request = require('request');
+var twilio = require('twilio');
+
+var client = twilio('SK6006fe17574a7717ef1955d8aefd5141', 'Vwi4p1UCf2FAfrhA19JNmmWRlytXrnvk');
+var twilio_number = "6042391736";
 
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({    extended: true    }));
 app.use(xmlParser());
 
-app.post('/twilio', function(req, res) {
+app.post('/twilio', twilio.webhook({
+validate: false
+}), function(req, res) {
 
     var uri = "https://maps.googleapis.com/maps/api/geocode/json?address=" + 
          req.param('Body')
          + "&key=" + process.env.KEY;
 
+    console.log(req.param('Body'));
+
     request(uri, function(err, resp) {
-        res.send(resp.body);
+        console.log(err, resp);
+        var twiml = new twilio.TwimlResponse();
+        twiml.message('Something');
+        res.send(twiml);
     });
 });
 
