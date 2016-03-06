@@ -5,33 +5,81 @@ var xmlParser = require('express-xml-bodyparser');
 var request = require('request');
 var twilio = require('twilio');
 
+var parse = require('csv-parse');
+var fs = require('fs');
+var geolib = require('geolib');
+var _ = require('lodash');
+var request = require('request');
+
 var client = twilio('SK6006fe17574a7717ef1955d8aefd5141', 'Vwi4p1UCf2FAfrhA19JNmmWRlytXrnvk');
 var twilio_number = "6042391736";
 
 app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({    extended: true    }));
+app.use(bodyParser.urlencoded({
+    extended: true
+}));
 app.use(xmlParser());
 
-app.post('/twilio', twilio.webhook({
-validate: false
-}), function(req, res) {
+var parser = parse({
+    delimiter: '\t'
+}, function(err, data) {
 
-    var uri = "https://maps.googleapis.com/maps/api/geocode/json?address=" + 
-         req.param('Body')
-         + "&key=" + process.env.KEY;
+    data.shift();
 
-    console.log(req.param('Body'));
+    app.post('/twilio', twilio.webhook({
+        validate: false
+    }), function(req, res) {
 
-    request(uri, function(err, resp) {
-        console.log(err, resp);
-        var twiml = new twilio.TwimlResponse();
-        var json = JSON.parse(resp.body);
-        console.log(JSON.stringify(json.results[0].geometry.location));
-        twiml.message(JSON.stringify(json.results[0].geometry.location));
-        res.send(twiml);
+        var uri = "https://maps.googleapis.com/maps/api/geocode/json?address=" +
+            req.param('Body') + "&key=" + process.env.KEY;
+
+        console.log(req.param('Body'));
+
+        request(uri, function(err, resp) {
+
+            console.log(err, resp);
+
+            var twiml = new twilio.TwimlResponse();
+            var json = JSON.parse(resp.body);
+
+            var loc = json.results[0].geometry.location;
+
+            var filtered = _.chain(data)
+                .filter(function(v) {
+                    var la = v[22];
+                    var lo = v[23];
+                    var dist = geolib.getDistance({
+                        latitude: loc.lat,
+                        longitude: loc.lng 
+                    }, {
+                        latitude: la,
+                        longitude: lo
+                    }, 1);
+
+                    v.push(dist);
+
+                    return dist < 1000;
+                }).map(function(o) {
+                    return {
+                        name: o[3],
+                        latitude: o[22],
+                        longitude: o[23],
+                        dist: o[o.length - 1]
+                    }
+                }).value();
+
+            var a = _.map(filtered, function(o) {
+                return o['name'] + ", BC, Canada";
+            });
+
+            twiml.message(JSON.stringify(a));
+            res.send(twiml);
+        });
+    });
+
+    app.listen(process.env.PORT || 3000, function(data) {
+        console.log('server running.');
     });
 });
 
-app.listen(process.env.PORT || 3000, function(data) {
-    console.log('server running.');
-});
+fs.createReadStream(__dirname + '/data.csv').pipe(parser);
